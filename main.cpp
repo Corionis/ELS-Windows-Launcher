@@ -25,7 +25,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
     path = path.substr(0, length - EXE_NAME_LENGTH);
 
     // Add path to ELS jar
-//    path = path + "rt\\bin\\javaw.exe -jar " + path + "bin\\ELS.jar ";
     path = "rt\\bin\\javaw.exe -jar \"" + path + "bin\\ELS.jar\" ";
 
     // Assemble the command line with arguments
@@ -51,12 +50,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
                     &processInformation
             );
 
-    // Wait until child process exits.
-    //WaitForSingleObject(processInformation.hProcess, INFINITE);
+    if (result == 0)
+    {
+        // Wait until child process exits.
+        result = WaitForSingleObject(processInformation.hProcess, INFINITE);
 
-    // Close process and thread handles.
-    CloseHandle(processInformation.hProcess);
-    CloseHandle(processInformation.hThread);
+        // Close process and thread handles.
+        CloseHandle(processInformation.hProcess);
+        CloseHandle(processInformation.hThread);
+    }
 
-    return 0;
+    return result;
 }
