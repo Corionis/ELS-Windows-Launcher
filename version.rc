@@ -17,7 +17,7 @@ BEGIN
             VALUE "FileDescription",  "Windows Launcher for ELS"
             VALUE "FileVersion",      "4, 0, 0, 1"
             VALUE "InternalName",     "ELS-Navigator.exe"
-            VALUE "LegalCopyright",   "https://github.com/Corionis/ELS"
+            VALUE "LegalCopyright",   "GPL License, https://github.com/Corionis/ELS"
             VALUE "OriginalFilename", "ELS-Navigator.exe"
             VALUE "ProductName",      "Entertainment Library Synchronizer"
             VALUE "ProductVersion",   "4.0.0"
