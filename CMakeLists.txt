@@ -1,3 +1,6 @@
+# make file for ELS Windows Launcher
+# NOte: The Debug build is used. There is no release build.
+
 cmake_minimum_required(VERSION 3.26)
 project(ELS_Win_Launch)
 

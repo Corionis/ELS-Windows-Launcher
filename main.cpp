@@ -4,6 +4,7 @@
 #include <iostream>
 #include <direct.h>
 #include <shlobj.h>
+#include <fstream>
 
 #define EXE_NAME_LENGTH 17  // The length of this executable name, e.g. ELS-Navigator.exe
 
@@ -13,9 +14,11 @@
  */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
 {
-    std::cout << "Starting ELS" << std::endl;
-
     char cwd[PATH_MAX];
+    char homeChar[PATH_MAX];
+    std::string homeStr;
+    std::ofstream log;
+    bool isLogging = false;
 
     // Declare and initialize process blocks
     PROCESS_INFORMATION processInformation;
@@ -24,9 +27,61 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
     // Get the passed command line
     std::string args = pCmdLine;
 
+    // is launcher logging enabled?
+    std::string logging(args);
+    std::string option = "--launcher-log";
+    int p = logging.find(option);
+    if (p >= 0)
+    {
+        // --launcher-log is for the launcher only and removed for the Navigator
+        int start = p - 1;
+        int end = p + option.length();
+        if (end < args.length() - 1 && std::isspace(args[end]))
+        {
+            start = 0;
+            ++end;
+        }
+        else if (start > 0 && std::isspace(args[start]))
+        {
+            --p;
+            start = 0;
+        }
+        else
+        {
+            start = 0;
+        }
+
+        std::string part1 = args.substr(start, p);
+        std::string part2 = args.substr(end, args.length());
+        args = part1 + part2;
+        isLogging = true;
+    }
+
+    // get user home directory
+    if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, homeChar) == S_OK)
+    {
+        homeStr = homeChar;
+    }
+    else
+    {
+        if (isLogging)
+            std::cerr << "Exception: Cannot get home directory" << std::endl;
+        return 1;
+    }
+
+    if (isLogging)
+    {
+        std::string homeLog = homeStr + "/.els/output";
+
+        homeLog += "/ELS-Windows-Launcher.log";
+        log.open(homeLog);
+        log << "log: " << homeLog << std::endl;
+    }
+
     // Get the current working directory
     getcwd(cwd, sizeof(cwd));
-    std::cout << "cwd: " << cwd << std::endl;
+    if (isLogging)
+        log << "cwd: " << cwd << std::endl;
 
     // Get the path to this executable
     TCHAR dest[MAX_PATH];
@@ -35,12 +90,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
 
     // Remove the executable name
     std::string search(path);
-    int p = search.find_last_of("\\");
+    p = search.find_last_of("\\");
     if (p >= 0)
         path = path.substr(0, p);
     else
         path = path.substr(0, length - EXE_NAME_LENGTH);
-    std::cout << "app: " << path << std::endl;
+    if (isLogging)
+        log << "app: " << path << std::endl;
 
     // detect -C [configuration directory] argument
     bool dashC = true;
@@ -85,7 +141,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
                         quoted = true;
                     else
                     {
-                        std::cout << "Parse error: Unexpected quote" << std::endl;
+                        if (isLogging)
+                            log << "Parse error: Unexpected quote" << std::endl;
                         return 1;
                     }
                 }
@@ -104,11 +161,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
 
         if (cwd[0] == '\0') // empty
         {
-            std::cout << "Exception: -C option requires a configuration directory argument" << std::endl;
+            if (isLogging)
+                log << "Exception: -C option requires a configuration directory argument" << std::endl;
             return 1;
         }
 
-        std::cout << "arg: " << cwd << std::endl;
+        if (isLogging)
+            log << "arg: " << cwd << std::endl;
 
         // make sure the directory exists
         std::filesystem::path directoryPath(cwd);
@@ -116,7 +175,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
         {
             if (!std::filesystem::is_directory(directoryPath))
             {
-                std::cout << "Exception: -C \"" << cwd << "\" exists but is not a directory" << std::endl;
+                if (isLogging)
+                    log << "Exception: -C \"" << cwd << "\" exists but is not a directory" << std::endl;
                 return 1;
             }
         }
@@ -129,7 +189,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
     // double check working directory
     char wd[PATH_MAX];
     getcwd(wd, sizeof(cwd));
-    std::cout << " wd: " << wd << std::endl;
+    if (isLogging)
+        log << " wd: " << wd << std::endl;
 
     // Add software location path to ELS jar
     path = path + "/rt/bin/javaw.exe -jar \"" + path + "/bin/ELS.jar\" ";
@@ -140,7 +201,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
     {
         // see if libraries directory exists in the software location
         char check[PATH_MAX];
-        std::string sd = wd;
+        std::string sd = cwd;
         sd += "/libraries";
         strncpy(check, &sd[0], sd.length());
 
@@ -150,58 +211,52 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
         {
             if (!std::filesystem::is_directory(directoryPath))
             {
-                std::cout << "Exception: \"" << sd << "\" exists but is not a directory" << std::endl;
+                if (isLogging)
+                    log << "Exception: \"" << sd << "\" exists but is not a directory" << std::endl;
                 return 1;
             }
         }
         else // not in program directory, use default of "USER_HOME/.els"
         {
             char check[PATH_MAX];
-            char home[PATH_MAX];
 
-            // get user home directory
-            if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, home) == S_OK)
+            if (isLogging)
+                log << "hom: " << homeStr << std::endl;
+            std::string sd = homeChar;
+            sd += "/.els";
+            for (int i = 0; i < sizeof(check); ++i)
+                check[i] = '\0';
+            strncpy(check, &sd[0], sd.length());
+
+            // make sure the directory exists
+            std::filesystem::path directoryPath(check);
+            if (std::filesystem::exists(directoryPath))
             {
-                std::cout << "hom: " << home << std::endl;
-                std::string sd = home;
-                sd += "/.els";
-                for (int i = 0; i < sizeof(check); ++i)
-                    check[i] = '\0';
-                strncpy(check, &sd[0], sd.length());
-
-                // make sure the directory exists
-                std::filesystem::path directoryPath(check);
-                if (std::filesystem::exists(directoryPath))
+                if (!std::filesystem::is_directory(directoryPath))
                 {
-                    if (!std::filesystem::is_directory(directoryPath))
-                    {
-                        std::cout << "Exception: \"" << sd << "\" exists but is not a directory" << std::endl;
-                        return 1;
-                    }
+                    if (isLogging)
+                        log << "Exception: \"" << sd << "\" exists but is not a directory" << std::endl;
+                    return 1;
                 }
-                else
-                    _mkdir(check); // create default directory
-
-                for (int i = 0; i < sizeof(wd); ++i)
-                    wd[i] = '\0';
-                strcpy(wd, check);
             }
             else
-            {
-                std::cerr << "Exception: Cannot get home directory" << std::endl;
-                return 1;
-            }
+                _mkdir(check); // create default directory
+
+            for (int i = 0; i < sizeof(cwd); ++i)
+                cwd[i] = '\0';
+            strcpy(cwd, check);
         }
 
-        std::string copy = wd;
-        config = "-C " + copy + " ";
+        std::string copy = cwd;
+        config = "-C \"" + copy + "\" ";
 
-        chdir(wd);
+        chdir(cwd);
 
         // double check working directory
         char wd[PATH_MAX];
-        getcwd(wd, sizeof(cwd));
-        std::cout << "cfg: " << wd << std::endl;
+        getcwd(wd, sizeof(wd));
+        if (isLogging)
+            log << "cfg: " << wd << std::endl;
     }
 
     // Assemble the command line with arguments
@@ -214,8 +269,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
         }
     }
 
+    // trim
+    int end = cmd.length() - 1;
+    while (end >= 0 && std::isspace(cmd[end]))
+        --end;
+    cmd = cmd.substr(0, end + 1);
+
     pCmdLine = const_cast<char *>(cmd.c_str());
-    std::cout << "cmd: " << pCmdLine << std::endl;
+    if (isLogging)
+        log << "cmd: " << pCmdLine << std::endl;
 
     memset(&processInformation, 0, sizeof(processInformation));
     memset(&startupInfo, 0, sizeof(startupInfo));
@@ -244,6 +306,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
         CloseHandle(processInformation.hProcess);
         CloseHandle(processInformation.hThread);
     }
+
+    if (isLogging)
+        log.close();
 
     return result;
 }

@@ -1,6 +1,6 @@
 1 VERSIONINFO
-FILEVERSION            4,0,0
-PRODUCTVERSION         4,0,0,1
+FILEVERSION            4,0,0,3
+PRODUCTVERSION         4,0,0,3
 
 #ifndef DEBUG
 #define VER_DEBUG                   0
@@ -15,9 +15,9 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "Corionis"
             VALUE "FileDescription",  "Windows Launcher for ELS"
-            VALUE "FileVersion",      "4, 0, 0, 1"
+            VALUE "FileVersion",      "4, 0, 0, 3"
             VALUE "InternalName",     "ELS-Navigator.exe"
-            VALUE "LegalCopyright",   "GPL License, https://github.com/Corionis/ELS"
+            VALUE "LegalCopyright",   "https://github.com/Corionis/ELS, GPL License"
             VALUE "OriginalFilename", "ELS-Navigator.exe"
             VALUE "ProductName",      "Entertainment Library Synchronizer"
             VALUE "ProductVersion",   "4.0.0"
