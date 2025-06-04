@@ -201,6 +201,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR pCmdLine, int nCmdShow)
     {
         // see if libraries directory exists in the software location
         char check[PATH_MAX];
+        for (int i = 0; i < sizeof(check); ++i)
+            check[i] = '\0';
         std::string sd = cwd;
         sd += "/libraries";
         strncpy(check, &sd[0], sd.length());

@@ -1,6 +1,6 @@
 1 VERSIONINFO
-FILEVERSION            4,0,0,3
-PRODUCTVERSION         4,0,0,3
+FILEVERSION            4,0,0,4
+PRODUCTVERSION         4,0,0,4
 
 #ifndef DEBUG
 #define VER_DEBUG                   0
